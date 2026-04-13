@@ -1,0 +1,250 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
+:root {
+  --bg-color: #f7f7f7;
+  --text-color: #000000;
+  --accent-color: #ffffff;
+  --border-color: #000000;
+  --font-main: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-main);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 3rem;
+  border-bottom: 2px solid var(--border-color);
+  background-color: var(--accent-color);
+}
+
+.logo {
+  font-weight: 900;
+  font-size: 1.2rem;
+  letter-spacing: -0.5px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #777;
+  font-weight: 600;
+  margin: 0 1rem;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+nav a.active, nav a:hover {
+  color: var(--text-color);
+  border-bottom: 2px solid var(--text-color);
+  padding-bottom: 4px;
+}
+
+/* Typography */
+h1 {
+  font-size: 6rem;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -2px;
+  margin: 3rem 3rem;
+  text-transform: uppercase;
+}
+
+h2 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  border-bottom: 4px solid var(--border-color);
+  display: inline-block;
+  padding-bottom: 5px;
+}
+
+h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* Layout */
+.container {
+  padding: 2rem 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+/* Cards / Panels */
+.panel {
+  border: 1px solid var(--border-color);
+  background-color: var(--accent-color);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text-color);
+  min-height: 250px;
+}
+
+.panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+}
+
+.panel h3 {
+  font-size: 1.5rem;
+  margin-top: 1rem;
+}
+
+.panel-static {
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  padding: 2rem;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  font-family: var(--font-main);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  background: var(--accent-color);
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 1rem 2rem;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.btn-black {
+  background-color: var(--text-color);
+  color: var(--accent-color);
+}
+
+.btn-black:hover {
+  background-color: #333;
+}
+
+.btn:hover {
+  background-color: #eaeaea;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2rem;
+  background-color: transparent;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+th {
+  background-color: #eaeaea;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-color: #ccc;
+}
+
+/* Video Feed */
+.video-container {
+  width: 100%;
+  border: 2px solid var(--border-color);
+  background: #eee;
+  min-height: 400px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-container img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.info-label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  display: block;
+}
+
+/* Detected Info Layout */
+.detected-info {
+  margin-bottom: 2rem;
+}
+.detected-info .label {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}
+.detected-info .value {
+  font-size: 1.2rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+}

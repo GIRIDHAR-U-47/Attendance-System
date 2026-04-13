@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Portal - Face ID</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .section-box {
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            background: var(--accent-color);
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">FACE_ID_SYSTEM</div>
+        <nav>
+            <a href="/">HOME</a>
+            <a href="/register">REGISTER</a>
+            <a href="/attendance" class="active">ATTENDANCE</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h2>ATTENDANCE PORTAL</h2>
+
+        <!-- STEP 1: STAFF AUTH -->
+        <div class="section-box" id="step1-container">
+            <div class="grid-2">
+                <div>
+                    <div class="section-title">STAFF AUTHORIZATION</div>
+                    <div class="form-group">
+                        <label>SUBJECT CODE</label>
+                        <input type="text" id="subject_code" placeholder="CS-402-A">
+                    </div>
+                    <button class="btn" id="btn-staff-verify" style="margin-top: 1rem;">STAFF FACE VERIFY</button>
+                    <p id="staff-status" style="margin-top: 1rem; font-weight: bold;"></p>
+                </div>
+                <div>
+                    <div class="video-container">
+                        <img src="/video_feed?mode=register" alt="Webcam feed">
+                        <div style="position: absolute; top: 10px; left: 10px; background: black; color: white; padding: 2px 5px; font-size: 0.6rem; font-weight: bold;">STAFF_CAM_01</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: LIVE ATTENDANCE -->
+        <div id="step2-container" class="hidden">
+            <div class="grid-2" style="margin-bottom: 2rem;">
+                <div class="section-box" style="margin-bottom: 0;">
+                    <div class="section-title">LIVE STUDENT DETECTION <span style="color: red; font-size: 0.7rem;">&#9632; STREAMING</span></div>
+                    <div class="video-container" style="border: 2px solid black;">
+                        <!-- Attendance feed with bounding boxes -->
+                        <img id="live-feed-img" src="" alt="Webcam feed">
+                    </div>
+                </div>
+                
+                <div class="section-box" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                    <div class="section-title">DETECTED INFO</div>
+                    <div class="detected-info">
+                        <div class="label">NAME</div>
+                        <div class="value" id="det-name">WAITING...</div>
+                        
+                        <div class="label">ROLL NUMBER</div>
+                        <div class="value" id="det-roll">---</div>
+                        
+                        <div class="label">CONFIDENCE</div>
+                        <div class="value" id="det-conf">0.0 / 1.0</div>
+                        
+                        <div class="label" style="margin-top: 1rem;">LIVENESS STATUS</div>
+                        <div class="value" id="det-liveness" style="color: orange; font-weight: bold;">WAITING...</div>
+                    </div>
+                    
+                    <div style="margin-top: auto;">
+                        <button class="btn btn-black" id="btn-mark-attendance" disabled>MARK ATTENDANCE</button>
+                        <p id="att-status" style="margin-top: 1rem; font-weight: bold; font-size: 0.8rem;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGS -->
+            <div class="section-title" style="border: none; padding: 0;">ATTENDANCE LOG - CURRENT SESSION</div>
+            <table>
+                <thead style="background: black; color: white;">
+                    <tr>
+                        <th style="background: black; border-color: #333;">ROLL NUMBER</th>
+                        <th style="background: black; border-color: #333;">NAME</th>
+                        <th style="background: black; border-color: #333;">TIME</th>
+                        <th style="background: black; border-color: #333;">SUBJECT CODE</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-log-body">
+                    <!-- Javascript will populate rows -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        let pollInterval = null;
+
+        document.getElementById('btn-staff-verify').addEventListener('click', async () => {
+            const subject_code = document.getElementById('subject_code').value.trim();
+            const statusMsg = document.getElementById('staff-status');
+
+            if(!subject_code) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Please enter subject code.";
+                return;
+            }
+
+            statusMsg.style.color = 'black';
+            statusMsg.innerText = "Verifying...";
+
+            try {
+                const res = await fetch('/api/verify_staff', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ subject_code })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    statusMsg.style.color = 'green';
+                    statusMsg.innerText = "Staff Verified! Opening session...";
+                    
+                    // Transition to step 2
+                    setTimeout(() => {
+                        document.getElementById('step1-container').classList.add('hidden');
+                        document.getElementById('step2-container').classList.remove('hidden');
+                        // Start the live feed with bounding boxes
+                        document.getElementById('live-feed-img').src = '/video_feed?mode=attendance_live';
+                        // Start polling
+                        pollInterval = setInterval(pollLatestDetection, 500);
+                    }, 1000);
+
+                } else {
+                    statusMsg.style.color = 'red';
+                    statusMsg.innerText = "Verify Failed: " + data.message;
+                }
+            } catch (err) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Fetch error: " + err.message;
+            }
+        });
+
+        async function pollLatestDetection() {
+            try {
+                const res = await fetch('/api/latest_detection');
+                const result = await res.json();
+                if(result.success && result.data) {
+                    const data = result.data;
+                    document.getElementById('det-name').innerText = data.name.toUpperCase();
+                    document.getElementById('det-roll').innerText = data.roll_number.toUpperCase();
+                    document.getElementById('det-conf').innerText = data.confidence.toFixed(4) + " / 1.0";
+                    
+                    const livenessEl = document.getElementById('det-liveness');
+                    const btn = document.getElementById('btn-mark-attendance');
+                    if (data.spoof_detected) {
+                        livenessEl.innerText = "FAILED: " + (data.spoof_reason || "SPOOF DETECTED");
+                        livenessEl.style.color = "red";
+                        btn.disabled = true;
+                    } else if (data.liveness_verified === true) {
+                        livenessEl.innerText = "VERIFIED";
+                        livenessEl.style.color = "green";
+                        btn.disabled = false;
+                    } else if (data.liveness_verified === false) {
+                        livenessEl.innerText = "CHALLENGE PENDING";
+                        livenessEl.style.color = "orange";
+                        btn.disabled = true;
+                    } else {
+                        livenessEl.innerText = "WAITING...";
+                        livenessEl.style.color = "black";
+                        btn.disabled = true;
+                    }
+                }
+            } catch(e) {
+                console.error("Polling error", e);
+            }
+        }
+
+        document.getElementById('btn-mark-attendance').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-mark-attendance');
+            btn.disabled = true;
+            const statusMsg = document.getElementById('att-status');
+            statusMsg.style.color = 'black';
+            statusMsg.innerText = "Marking...";
+
+            try {
+                const res = await fetch('/api/mark_attendance', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    statusMsg.style.color = 'green';
+                    statusMsg.innerText = "Attendance logged successfully.";
+                    updateTable(data.records);
+                } else {
+                    statusMsg.style.color = 'red';
+                    statusMsg.innerText = "Error: " + data.message;
+                }
+            } catch (err) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Fetch error: " + err.message;
+            } finally {
+                setTimeout(() => { btn.disabled = false; }, 1000); // Re-enable after short delay
+            }
+        });
+
+        function updateTable(records) {
+            const tbody = document.getElementById('attendance-log-body');
+            tbody.innerHTML = '';
+            records.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.roll_number}</td>
+                    <td>${r.name}</td>
+                    <td>${r.time}</td>
+                    <td>${r.subject_code}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

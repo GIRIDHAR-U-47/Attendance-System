@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo">FACE_ID_SYSTEM</div>
+        <nav>
+            <a href="/" class="active">HOME</a>
+            <a href="/register">REGISTER</a>
+            <a href="/attendance">ATTENDANCE</a>
+        </nav>
+    </header>
+
+    <h1>FACE ATTENDANCE<br>SYSTEM</h1>
+
+    <div class="container">
+        <div class="grid-2">
+            <a href="/register" class="panel">
+                <h3>REGISTER NEW STUDENT</h3>
+                <span class="info-label">01_PROC_REG</span>
+            </a>
+            <a href="/attendance" class="panel">
+                <h3>MAKE ATTENDANCE</h3>
+                <span class="info-label">02_PROC_SCAN</span>
+            </a>
+        </div>
+
+        <h3 style="margin-top: 4rem;">RECENT ATTENDANCE LOGS <span style="float:right; font-size: 0.8rem; font-weight: normal;">SYSTEM STATUS: NOMINAL</span></h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>TIMESTAMP</th>
+                    <th>STUDENT ID</th>
+                    <th>NAME</th>
+                    <th>STATUS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.timestamp }}</td>
+                    <td>{{ log.student_id }}</td>
+                    <td>{{ log.name }}</td>
+                    <td>&#9632; {{ log.status }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No recent logs found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

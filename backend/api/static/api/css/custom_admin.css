@@ -1,0 +1,48 @@
+/* REC Custom Admin Branding */
+:root {
+    --rec-purple: #6A1B9A;
+    --rec-gold: #FFD700;
+}
+
+/* Header & Sidebar Branding */
+.main-header {
+    background-color: var(--rec-purple) !important;
+    border-bottom: 2px solid var(--rec-gold) !important;
+}
+
+.brand-link {
+    background-color: var(--rec-purple) !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active {
+    background-color: var(--rec-purple) !important;
+    border-left: 4px solid var(--rec-gold) !important;
+}
+
+/* Buttons and Links */
+.btn-primary, .btn-info {
+    background-color: var(--rec-purple) !important;
+    border-color: var(--rec-purple) !important;
+}
+
+.btn-primary:hover {
+    background-color: #4A148C !important;
+}
+
+/* Table Headers */
+.table thead th {
+    background-color: #F8F9FA;
+    color: var(--rec-purple);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+/* Custom Dashboard Header */
+.content-header h1 {
+    color: var(--rec-purple);
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}

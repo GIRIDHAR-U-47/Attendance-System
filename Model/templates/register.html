@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Student - Face ID</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .workflow-box {
+            margin-top: 1rem;
+            background: #f4f4f4;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .workflow-title {
+            margin-top: 0;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+        .instruction-main {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #0056b3;
+        }
+        .step-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .step-list li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">FACE_ID_SYSTEM</div>
+        <nav>
+            <a href="/">HOME</a>
+            <a href="/register" class="active">REGISTER</a>
+            <a href="/attendance">ATTENDANCE</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h2>REGISTER STUDENT</h2>
+        <div class="grid-2">
+            <div>
+                <div class="form-group">
+                    <label>STUDENT NAME</label>
+                    <input type="text" id="student_name" placeholder="ENTER FULL NAME">
+                </div>
+                <div class="form-group">
+                    <label>ROLL NUMBER</label>
+                    <input type="text" id="roll_number" placeholder="E.G. 2024-CSE-101">
+                </div>
+                <div class="form-group">
+                    <label>DEPARTMENT</label>
+                    <input type="text" id="department" placeholder="COMPUTER SCIENCE">
+                </div>
+                <div class="form-group">
+                    <label>YEAR</label>
+                    <input type="text" id="year" placeholder="2024">
+                </div>
+            </div>
+            
+            <div>
+                <div class="video-container" style="border: 2px solid black; position: relative;">
+                    <!-- Raw webcam feed for registration -->
+                    <img src="/video_feed?mode=register" alt="Webcam feed" style="width: 100%; display: block;">
+                    <div style="position: absolute; top: 10px; left: 10px; background: white; border: 1px solid black; padding: 2px 5px; font-size: 0.6rem; font-weight: bold;">LIVE FEED WITH LANDMARKS</div>
+                </div>
+                
+                <div class="workflow-box">
+                    <h3 class="workflow-title">POSE CAPTURE WORKFLOW</h3>
+                    <div id="pose-instruction" class="instruction-main">
+                        Pose 1/3 &rarr; Turn LEFT
+                    </div>
+                    <ul class="step-list">
+                        <li id="step-left">Pose 1/3 &rarr; Turn LEFT</li>
+                        <li id="step-front">Pose 2/3 &rarr; Look FRONT</li>
+                        <li id="step-right">Pose 3/3 &rarr; Turn RIGHT</li>
+                    </ul>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn" id="btn-capture">CAPTURE FACE</button>
+                    <button class="btn btn-black" id="btn-register" disabled>REGISTER</button>
+                </div>
+                <p id="status-msg" style="font-size: 0.85rem; margin-top: 1rem; font-weight: bold;"></p>
+            </div>
+        </div>
+        <div class="info-label" style="margin-top: 3rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+            SYSTEM_LOG: DIRECTORY PATH<br>
+            <span style="color: black; font-weight: bold;">known_faces/{rollnumber}_{studentname}/</span>
+        </div>
+    </div>
+
+    <script>
+        const poses = ['left', 'front', 'right'];
+        const instructions = ['Turn LEFT', 'Look FRONT', 'Turn RIGHT'];
+        let currentPoseIndex = 0;
+
+        function updateInstructionUI() {
+            if (currentPoseIndex < 3) {
+                const currentPose = poses[currentPoseIndex];
+                document.getElementById('pose-instruction').innerHTML = `Pose ${currentPoseIndex + 1}/3 &rarr; ${instructions[currentPoseIndex]}`;
+                document.getElementById('btn-capture').disabled = false;
+                document.querySelector('.video-container img').src = `/video_feed?mode=register&pose=${currentPose}`;
+            } else {
+                document.getElementById('pose-instruction').innerHTML = `All 3 poses captured. Ready to register.`;
+                document.getElementById('btn-capture').disabled = true;
+                document.getElementById('btn-register').disabled = false;
+            }
+        }
+
+        document.getElementById('btn-capture').addEventListener('click', async () => {
+            const roll_number = document.getElementById('roll_number').value.trim();
+            const student_name = document.getElementById('student_name').value.trim();
+            const statusMsg = document.getElementById('status-msg');
+
+            if(!roll_number || !student_name) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Please fill in Roll Number and Student Name before capturing.";
+                return;
+            }
+
+            if (currentPoseIndex >= 3) return;
+
+            const currentPose = poses[currentPoseIndex];
+
+            statusMsg.style.color = 'black';
+            statusMsg.innerText = `Capturing ${currentPose.toUpperCase()}...`;
+            document.getElementById('btn-capture').disabled = true;
+
+            try {
+                const res = await fetch('/api/capture_face', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ roll_number, student_name, pose: currentPose })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    statusMsg.style.color = 'green';
+                    statusMsg.innerText = `✓ ${currentPose.toUpperCase()} CAPTURED SUCCESSFULLY!`;
+                    
+                    // Mark step as complete
+                    const stepEl = document.getElementById('step-' + currentPose);
+                    stepEl.innerText = `✓ ${currentPose.toUpperCase()} CAPTURED`;
+                    stepEl.style.color = 'green';
+                    stepEl.style.fontWeight = 'bold';
+                    
+                    // Advance step
+                    currentPoseIndex++;
+                    updateInstructionUI();
+                } else {
+                    statusMsg.style.color = 'red';
+                    statusMsg.innerText = "Error: " + data.message;
+                    document.getElementById('btn-capture').disabled = false;
+                }
+            } catch (err) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Fetch error: " + err.message;
+                document.getElementById('btn-capture').disabled = false;
+            }
+        });
+
+        document.getElementById('btn-register').addEventListener('click', async () => {
+            const roll_number = document.getElementById('roll_number').value.trim();
+            const student_name = document.getElementById('student_name').value.trim();
+            const department = document.getElementById('department').value.trim();
+            const year = document.getElementById('year').value.trim();
+            const statusMsg = document.getElementById('status-msg');
+
+            statusMsg.style.color = 'black';
+            statusMsg.innerText = "Registering...";
+            document.getElementById('btn-register').disabled = true;
+
+            try {
+                const res = await fetch('/api/register_student', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        roll_number, 
+                        student_name,
+                        department,
+                        year
+                    })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    statusMsg.style.color = 'green';
+                    statusMsg.innerText = "Registration complete!";
+                    // Reset
+                    document.getElementById('roll_number').value = '';
+                    document.getElementById('student_name').value = '';
+                    document.getElementById('department').value = '';
+                    document.getElementById('year').value = '';
+                    
+                    currentPoseIndex = 0;
+                    ['left', 'front', 'right'].forEach((p, idx) => {
+                        const el = document.getElementById('step-' + p);
+                        el.innerText = `Pose ${idx+1}/3 → ${instructions[idx]}`;
+                        el.style.color = '#666';
+                        el.style.fontWeight = 'normal';
+                    });
+                    updateInstructionUI();
+                } else {
+                    statusMsg.style.color = 'red';
+                    statusMsg.innerText = "Error: " + data.message;
+                    document.getElementById('btn-register').disabled = false;
+                }
+            } catch (err) {
+                statusMsg.style.color = 'red';
+                statusMsg.innerText = "Fetch error: " + err.message;
+                document.getElementById('btn-register').disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

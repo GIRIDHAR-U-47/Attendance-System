@@ -1,0 +1,59 @@
+.navbar-primary {
+    background-color: #6A1B9A !important;
+}
+.sidebar-dark-primary {
+    background-color: #4A148C !important;
+}
+.btn-primary, .btn-info, .btn-success {
+    background-color: #6A1B9A !important;
+    border-color: #6A1B9A !important;
+    color: #ffffff !important;
+}
+.btn-primary:hover, .btn-info:hover, .btn-success:hover {
+    background-color: #4A148C !important;
+    border-color: #4A148C !important;
+}
+.accent-primary {
+    color: #6A1B9A !important;
+}
+/* REC Gold Accent */
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+    background-color: #FFD700 !important;
+    color: #4A148C !important;
+}
+.brand-link {
+    background-color: #4A148C !important;
+    height: 60px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.brand-image {
+    max-height: 45px !important;
+    width: auto !important;
+    background: white !important;
+    padding: 2px !important;
+    border-radius: 4px !important;
+}
+/* Login Page Fixes */
+.login-box {
+    border-top: 5px solid #6A1B9A !important;
+}
+.login-card-body .btn-primary {
+    background-color: #6A1B9A !important;
+}
+.login-logo a {
+    color: #6A1B9A !important;
+    font-weight: bold !important;
+}
+body {
+    background-color: #F8F0FA !important;
+}
+.card-primary.card-outline {
+    border-top: 3px solid #6A1B9A !important;
+}
+.main-sidebar {
+    background-color: #4A148C !important;
+}
+.main-header {
+    border-bottom: 3px solid #FFD700 !important;
+}
