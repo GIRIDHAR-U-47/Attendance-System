@@ -11,10 +11,32 @@ const COLORS = {
 };
 
 export default function TeacherVerificationScreen({ navigation, route }) {
-  const { subject, teacherId } = route.params;
+  const { subject, teacherId, user } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [verifying, setVerifying] = useState(false);
   const cameraRef = useRef(null);
+
+  // Resolve subject_code from whichever field exists (new normalized vs old shape)
+  const subjectCode = subject?.subject_code || subject?.code || null;
+
+  if (!subjectCode) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 30 }]}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#C62828', textAlign: 'center', marginBottom: 12 }}>
+          ⚠ Invalid Subject Selection
+        </Text>
+        <Text style={{ color: '#757575', textAlign: 'center', fontSize: 15 }}>
+          Please go back to the dashboard and reopen the subject card.
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 24 }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.buttonText}>← Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -36,16 +58,23 @@ export default function TeacherVerificationScreen({ navigation, route }) {
       setVerifying(true);
       try {
         const photo = await cameraRef.current.takePictureAsync({ base64: true });
-        
-        // Send base64 frame to Flask Model server
+
+        // Send base64 frame to Flask Model server for faculty face verification
         const response = await axios.post(`${MODEL_URL}/verify_staff`, {
-          subject_code: subject.code,
+          subject_code: subjectCode,   // ← always from resolved subject param
           image: photo.base64
         });
-        
+
         if (response.data.success) {
-          Alert.alert('Success', 'Teacher Authenticated! Timestamp recorded.', [
-            { text: 'OK', onPress: () => navigation.replace('LiveAttendance', { subject, teacherId }) }
+          Alert.alert('✅ Verified', 'Teacher Authenticated! Starting session...', [
+            {
+              text: 'Continue',
+              onPress: () => navigation.replace('LiveAttendance', {
+                subject,    // pass full subject object
+                teacherId,
+                user,       // pass user for faculty_id in start-session call
+              })
+            }
           ]);
         } else {
           Alert.alert('Verification Failed', response.data.message || 'Staff not recognized.');

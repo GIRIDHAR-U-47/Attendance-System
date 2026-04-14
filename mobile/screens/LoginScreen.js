@@ -28,9 +28,9 @@ const COLORS = {
 };
 
 export default function LoginScreen({ navigation, route }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [rollNumber, setRollNumber] = useState('');
+  const [password, setPassword]    = useState('');
+  const [loading, setLoading]      = useState(false);
 
   useEffect(() => {
     const ensureDeviceId = async () => {
@@ -112,7 +112,7 @@ export default function LoginScreen({ navigation, route }) {
       const deviceId = await SecureStore.getItemAsync('device_id');
 
       const res = await axios.post(`${API_URL}/auth/login/`, {
-        username,
+        username:  rollNumber.trim(),  // backend accepts roll_number as username field
         password,
         latitude,
         longitude,
@@ -165,14 +165,15 @@ export default function LoginScreen({ navigation, route }) {
 
             <View style={styles.form}>
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Student ID / Username</Text>
+                    <Text style={styles.label}>Roll Number</Text>
                     <TextInput 
                         style={styles.input} 
-                        placeholder="e.g. 211201001"
+                        placeholder="e.g. 240801001"
                         placeholderTextColor="#B0A0C0"
-                        value={username} 
-                        onChangeText={setUsername} 
-                        autoCapitalize="none"
+                        value={rollNumber} 
+                        onChangeText={setRollNumber} 
+                        autoCapitalize="characters"
+                        keyboardType="default"
                     />
                 </View>
 

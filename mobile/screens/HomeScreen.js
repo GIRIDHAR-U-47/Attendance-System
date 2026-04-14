@@ -54,10 +54,10 @@ export default function HomeScreen({ route, navigation }) {
 
     const fetchAttendance = async () => {
       try {
-        const res = await axios.get(`${API_URL}/attendance/?student_id=${user.id}`);
+        const res = await axios.get(`${API_URL}/student/attendance-summary/?student_id=${user.roll_number}`);
         setAttendance(res.data);
       } catch (err) {
-        console.error("Failed to fetch attendance");
+        console.error("Failed to fetch attendance summary");
       }
       setLoading(false);
     };
@@ -123,108 +123,40 @@ export default function HomeScreen({ route, navigation }) {
     };
   }, [user.id, navigation]);
 
-  const totalClasses = attendance.length;
-  const presentClasses = attendance.filter(a => a.status === 'Present').length;
-  const overallPercentage = totalClasses === 0 ? 0 : Math.round((presentClasses / totalClasses) * 100);
+  const subjectData = attendance; // Each item already has all required analytics fields
 
-  const MASTER_SUBJECTS = [
-    { name: 'Natural Language Processing', hasPractical: true },
-    { name: 'Secure Systems Engineering', hasPractical: false },
-    { name: 'Predictive and Prescriptive Analytics', hasPractical: true },
-    { name: 'Generative AI', hasPractical: true },
-    { name: 'Design Thinking and Innovation', hasPractical: true },
-    { name: 'Problem Solving Techniques', hasPractical: true },
-  ];
-
-  // Group by deduplicated Subject Name and split by Lecture/Practical
-  const subjectsMap = {};
-  
-  // Initialize with Master Subjects
-  MASTER_SUBJECTS.forEach(sub => {
-      subjectsMap[sub.name] = { 
-          lecture: { present: 0, total: 0, records: [] },
-          practical: sub.hasPractical ? { present: 0, total: 0, records: [] } : null
-      };
-  });
-
-  attendance.forEach(att => {
-      const baseName = att.subject.split('[')[0].replace('Lecture', '').replace('Practical', '').trim();
-      const type = att.subject.toLowerCase().includes('practical') ? 'Practical' : 'Lecture';
-      
-      if (!subjectsMap[baseName]) {
-          subjectsMap[baseName] = { 
-              lecture: { present: 0, total: 0, records: [] },
-              practical: { present: 0, total: 0, records: [] }
-          };
-      }
-      
-      const subGroup = type === 'Practical' ? (subjectsMap[baseName].practical || (subjectsMap[baseName].practical = { present: 0, total: 0, records: [] })) : subjectsMap[baseName].lecture;
-      subGroup.total += 1;
-      if (att.status === 'Present') subGroup.present += 1;
-      subGroup.records.push(att);
-  });
-
-  const subjectData = Object.keys(subjectsMap).map(name => ({
-      name,
-      lecture: subjectsMap[name].lecture,
-      practical: subjectsMap[name].practical,
-      totalPresent: (subjectsMap[name].lecture?.present || 0) + (subjectsMap[name].practical?.present || 0),
-      totalClasses: (subjectsMap[name].lecture?.total || 0) + (subjectsMap[name].practical?.total || 0),
-  }));
 
   const toggleSubject = (subjName) => {
       setExpandedSubject(expandedSubject === subjName ? null : subjName);
   };
 
-  const renderSubject = ({ item }) => {
-    const totalPercentage = item.totalClasses > 0 ? Math.round((item.totalPresent / item.totalClasses) * 100) : 0;
-    const lPerc = item.lecture.total > 0 ? Math.round((item.lecture.present / item.lecture.total) * 100) : 0;
-    const pPerc = (item.practical && item.practical.total > 0) ? Math.round((item.practical.present / item.practical.total) * 100) : 0;
+  const totalClasses = subjectData.reduce((s, x) => s + (x.total_classes || 0), 0);
+  const presentClasses = subjectData.reduce((s, x) => s + (x.present || 0), 0);
+  const overallPercentage = totalClasses === 0 ? 0 : Math.round((presentClasses / totalClasses) * 100);
 
+  const renderSubject = ({ item }) => {
+    const pct = item.percentage ?? 0;
     return (
       <View style={styles.subjectCard}>
-          <TouchableOpacity onPress={() => toggleSubject(item.name)} style={styles.subjectHeader}>
+          <TouchableOpacity onPress={() => toggleSubject(item.subject_code)} style={styles.subjectHeader}>
               <View style={{flex: 1}}>
-                  <Text style={styles.subjectTitle}>{item.name}</Text>
-                  <Text style={styles.subjectStats}>{item.totalPresent} / {item.totalClasses} Total Classes</Text>
+                  <Text style={styles.subjectTitle}>{item.subject_name}</Text>
+                  <Text style={styles.subjectStats}>{item.present} / {item.total_classes} Classes  ·  {item.department} Yr {item.year}</Text>
               </View>
-              <View style={[styles.percentageBadge, { backgroundColor: totalPercentage >= 75 ? '#E8F5E9' : '#FFF3E0' }]}>
-                  <Text style={[styles.subjectPercentageText, { color: totalPercentage >= 75 ? '#2E7D32' : '#EF6C00' }]}>{totalPercentage}%</Text>
+              <View style={[styles.percentageBadge, { backgroundColor: pct >= 75 ? '#E8F5E9' : '#FFF3E0' }]}>
+                  <Text style={[styles.subjectPercentageText, { color: pct >= 75 ? '#2E7D32' : '#EF6C00' }]}>{pct}%</Text>
               </View>
           </TouchableOpacity>
           
-          {expandedSubject === item.name && (
+          {expandedSubject === item.subject_code && (
               <View style={styles.recordsList}>
-                  {item.lecture.total > 0 && (
-                      <View style={styles.typeSection}>
-                        <View style={styles.typeSectionHeader}>
-                            <Text style={styles.typeTitle}>Lecture Attendance ({lPerc}%)</Text>
-                        </View>
-                        {item.lecture.records.map(rec => (
-                            <View key={rec.id} style={styles.recordItem}>
-                                <Text style={styles.recordDate}>{new Date(rec.date).toLocaleDateString()}</Text>
-                                <View style={[styles.statusTag, { backgroundColor: rec.status === 'Present' ? '#E8F5E9' : '#FFEBEE' }]}>
-                                    <Text style={[styles.recordStatus, { color: rec.status === 'Present' ? '#2E7D32' : '#C62828' }]}>{rec.status}</Text>
-                                </View>
-                            </View>
-                        ))}
-                      </View>
-                  )}
-
-                  {(item.practical && item.practical.total > 0) && (
-                      <View style={[styles.typeSection, { marginTop: 15 }]}>
-                         <View style={styles.typeSectionHeader}>
-                            <Text style={styles.typeTitle}>Practical Attendance ({pPerc}%)</Text>
-                        </View>
-                        {item.practical.records.map(rec => (
-                            <View key={rec.id} style={styles.recordItem}>
-                                <Text style={styles.recordDate}>{new Date(rec.date).toLocaleDateString()}</Text>
-                                <View style={[styles.statusTag, { backgroundColor: rec.status === 'Present' ? '#E8F5E9' : '#FFEBEE' }]}>
-                                    <Text style={[styles.recordStatus, { color: rec.status === 'Present' ? '#2E7D32' : '#C62828' }]}>{rec.status}</Text>
-                                </View>
-                            </View>
-                        ))}
-                      </View>
+                  <View style={styles.statsRow}>
+                      <View style={styles.statBox}><Text style={[styles.statNum, {color: '#2E7D32'}]}>{item.present}</Text><Text style={styles.statLabel}>Present</Text></View>
+                      <View style={styles.statBox}><Text style={[styles.statNum, {color: '#C62828'}]}>{item.absent}</Text><Text style={styles.statLabel}>Absent</Text></View>
+                      <View style={styles.statBox}><Text style={[styles.statNum, {color: COLORS.primary}]}>{item.total_classes}</Text><Text style={styles.statLabel}>Total</Text></View>
+                  </View>
+                  {item.latest_date && (
+                      <Text style={styles.latestDate}>Last session: {new Date(item.latest_date).toLocaleString()}</Text>
                   )}
               </View>
           )}
@@ -334,5 +266,10 @@ const styles = StyleSheet.create({
   statusTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   recordStatus: { fontSize: 13, fontWeight: '700' },
   emptyContainer: { alignItems: 'center', marginTop: 40 },
-  emptyText: { color: '#BDBDBD', fontSize: 16 }
+  emptyText: { color: '#BDBDBD', fontSize: 16 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10 },
+  statBox: { alignItems: 'center', flex: 1 },
+  statNum: { fontSize: 24, fontWeight: '900' },
+  statLabel: { fontSize: 12, color: '#9E9E9E', fontWeight: '600', marginTop: 2 },
+  latestDate: { textAlign: 'center', color: '#9E9E9E', fontSize: 12, marginTop: 8, borderTopWidth: 1, borderTopColor: '#F5F5F5', paddingTop: 8 },
 });

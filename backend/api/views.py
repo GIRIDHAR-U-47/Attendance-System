@@ -5,10 +5,16 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from datetime import timedelta
-from .models import User, CampusZone, LocationRecord, Attendance, Note
+from .models import (
+    User, CampusZone, LocationRecord, Attendance, Note,
+    Subject, StudentSubjectEnrollment, AttendanceSession, AttendanceRecord,
+    SubjectCatalog
+)
 from .serializers import (
-    UserSerializer, CampusZoneSerializer, LocationRecordSerializer, 
-    AttendanceSerializer, NoteSerializer
+    UserSerializer, CampusZoneSerializer, LocationRecordSerializer,
+    AttendanceSerializer, NoteSerializer, SubjectSerializer,
+    AttendanceSessionSerializer, AttendanceRecordSerializer,
+    SubjectCatalogSerializer
 )
 
 def is_point_in_polygon(lat, lng, polygon):
@@ -262,3 +268,272 @@ def engine_log_attendance(request):
         return Response({'success': False, 'message': 'Unknown Roll Number'})
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ============================================================
+# NEW NORMALIZED FACULTY & STUDENT ENDPOINTS
+# ============================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def filter_students(request):
+    """GET /api/students/filter/?department=<dept>&year=<year>"""
+    department = request.query_params.get('department')
+    year = request.query_params.get('year')
+    qs = User.objects.filter(role='student')
+    if department:
+        qs = qs.filter(department__iexact=department)
+    if year:
+        qs = qs.filter(year_of_joining=year)
+    return Response(UserSerializer(qs, many=True).data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def subject_catalog(request):
+    """GET /api/subjects/catalog/?department=<dept>&year=<year>&semester=<sem>"""
+    department = request.query_params.get('department')
+    year       = request.query_params.get('year')
+    semester   = request.query_params.get('semester')
+    qs = SubjectCatalog.objects.all()
+    if department:
+        qs = qs.filter(department__iexact=department)
+    if year:
+        qs = qs.filter(year=year)
+    if semester:
+        qs = qs.filter(semester__iexact=semester)
+    return Response(SubjectCatalogSerializer(qs, many=True).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def faculty_create_subject(request):
+    """POST /api/faculty/create-subject/"""
+    subject_code = request.data.get('subject_code')
+    subject_name = request.data.get('subject_name')
+    department   = request.data.get('department')
+    year         = request.data.get('year')
+    faculty_id   = request.data.get('faculty_id')   # roll_number / username
+    student_ids  = request.data.get('student_ids', [])  # list of roll_numbers
+    semester     = request.data.get('semester', '')
+
+    try:
+        faculty = User.objects.get(roll_number=faculty_id, role='faculty')
+    except User.DoesNotExist:
+        try:
+            faculty = User.objects.get(username=faculty_id, role='faculty')
+        except User.DoesNotExist:
+            return Response({'success': False, 'message': 'Faculty not found'}, status=404)
+
+    if Subject.objects.filter(subject_code=subject_code).exists():
+        return Response({'success': False, 'message': 'Subject code already exists'}, status=400)
+
+    subject = Subject.objects.create(
+        subject_code=subject_code,
+        subject_name=subject_name,
+        department=department,
+        year=year,
+        faculty=faculty
+    )
+
+    # Bulk enroll students
+    enrollments = []
+    for sid in student_ids:
+        try:
+            student = User.objects.get(roll_number=sid, role='student')
+            if not StudentSubjectEnrollment.objects.filter(student=student, subject=subject).exists():
+                enrollments.append(StudentSubjectEnrollment(
+                    student=student, subject=subject, semester=semester, is_active=True
+                ))
+        except User.DoesNotExist:
+            pass
+    StudentSubjectEnrollment.objects.bulk_create(enrollments)
+
+    return Response({
+        'success': True,
+        'message': f'Subject {subject_code} created with {len(enrollments)} students enrolled.',
+        'subject': SubjectSerializer(subject).data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def faculty_subjects(request):
+    """GET /api/faculty/subjects/?faculty_id=<id>"""
+    faculty_id = request.query_params.get('faculty_id')
+    try:
+        faculty = User.objects.get(roll_number=faculty_id, role='faculty')
+    except User.DoesNotExist:
+        try:
+            faculty = User.objects.get(username=faculty_id, role='faculty')
+        except User.DoesNotExist:
+            return Response([], status=200)
+    subjects = Subject.objects.filter(faculty=faculty)
+    return Response(SubjectSerializer(subjects, many=True).data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def faculty_start_session(request):
+    """POST /api/faculty/start-session/"""
+    subject_code = request.data.get('subject_code')
+    faculty_id   = request.data.get('faculty_id')
+
+    try:
+        subject = Subject.objects.get(subject_code=subject_code)
+    except Subject.DoesNotExist:
+        return Response({'success': False, 'message': 'Subject not found'}, status=404)
+
+    try:
+        faculty = User.objects.get(roll_number=faculty_id, role='faculty')
+    except User.DoesNotExist:
+        try:
+            faculty = User.objects.get(username=faculty_id, role='faculty')
+        except User.DoesNotExist:
+            return Response({'success': False, 'message': 'Faculty not found'}, status=404)
+
+    session = AttendanceSession.objects.create(
+        subject=subject,
+        faculty=faculty,
+        department=subject.department,
+        year=subject.year,
+        expected_count=StudentSubjectEnrollment.objects.filter(subject=subject, is_active=True).count()
+    )
+    return Response({
+        'success': True,
+        'session_id': str(session.session_id),
+        'message': f'Session started for {subject_code}'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def faculty_stop_session(request):
+    """POST /api/faculty/stop-session/"""
+    session_id     = request.data.get('session_id')
+    present_ids    = request.data.get('present_student_ids', [])     # roll_numbers detected
+    confidences    = request.data.get('confidences', {})             # {roll_number: float}
+    spoof_statuses = request.data.get('spoof_statuses', {})          # {roll_number: str}
+
+    try:
+        session = AttendanceSession.objects.get(session_id=session_id)
+    except AttendanceSession.DoesNotExist:
+        return Response({'success': False, 'message': 'Session not found'}, status=404)
+
+    if session.status == 'Finalized':
+        return Response({'success': False, 'message': 'Session already finalized'}, status=400)
+
+    # All enrolled students for this subject
+    enrolled_qs = StudentSubjectEnrollment.objects.filter(
+        subject=session.subject, is_active=True
+    ).select_related('student')
+
+    present_set = set(present_ids)
+    records_to_create = []
+    present_count = 0
+    absent_count = 0
+
+    for enrollment in enrolled_qs:
+        sid = enrollment.student.roll_number
+        is_present = sid in present_set
+        rec_status = 'Present' if is_present else 'Absent'
+        # Guard against duplicates from previous partial calls
+        if AttendanceRecord.objects.filter(session=session, student=enrollment.student).exists():
+            continue
+        records_to_create.append(AttendanceRecord(
+            session=session,
+            student=enrollment.student,
+            status=rec_status,
+            confidence=confidences.get(sid),
+            spoof_status=spoof_statuses.get(sid, 'N/A')
+        ))
+        if is_present:
+            present_count += 1
+        else:
+            absent_count += 1
+
+    # Bulk insert all attendance records in one DB call
+    AttendanceRecord.objects.bulk_create(records_to_create)
+
+    # Finalize session with aggregates
+    session.end_time = timezone.now()
+    session.status = 'Finalized'
+    session.present_count = present_count
+    session.absent_count = absent_count
+    session.save()
+
+    return Response({
+        'success': True,
+        'session_id': str(session.session_id),
+        'expected': session.expected_count,
+        'present': present_count,
+        'absent': absent_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def student_attendance_summary(request):
+    """GET /api/student/attendance-summary/?student_id=<roll_number>"""
+    student_id = request.query_params.get('student_id')
+    try:
+        student = User.objects.get(roll_number=student_id, role='student')
+    except User.DoesNotExist:
+        return Response([], status=200)
+
+    enrollments = StudentSubjectEnrollment.objects.filter(
+        student=student, is_active=True
+    ).select_related('subject')
+
+    result = []
+    for e in enrollments:
+        records = AttendanceRecord.objects.filter(session__subject=e.subject, student=student)
+        total   = records.count()
+        present = records.filter(status='Present').count()
+        absent  = total - present
+        latest  = records.order_by('-marked_at').first()
+        result.append({
+            'subject_code': e.subject.subject_code,
+            'subject_name': e.subject.subject_name,
+            'department':   e.subject.department,
+            'year':         e.subject.year,
+            'total_classes': total,
+            'present':       present,
+            'absent':        absent,
+            'percentage':    round((present / total * 100) if total > 0 else 0, 1),
+            'latest_date':   latest.marked_at.isoformat() if latest else None
+        })
+    return Response(result)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def student_attendance_history(request):
+    """GET /api/student/attendance-history/?student_id=<roll_number>&subject_code=<code>"""
+    student_id   = request.query_params.get('student_id')
+    subject_code = request.query_params.get('subject_code')
+    try:
+        student = User.objects.get(roll_number=student_id, role='student')
+    except User.DoesNotExist:
+        return Response([], status=200)
+
+    records = AttendanceRecord.objects.filter(
+        student=student
+    ).select_related('session', 'session__subject')
+
+    if subject_code:
+        records = records.filter(session__subject__subject_code=subject_code)
+
+    records = records.order_by('-marked_at')
+    result = []
+    for r in records:
+        result.append({
+            'session_id':   str(r.session.session_id),
+            'subject_code': r.session.subject.subject_code,
+            'subject_name': r.session.subject.subject_name,
+            'session_date': r.session.session_date.isoformat(),
+            'status':       r.status,
+            'marked_at':    r.marked_at.isoformat(),
+            'confidence':   r.confidence,
+            'spoof_status': r.spoof_status
+        })
+    return Response(result)

@@ -1,4 +1,4 @@
-Django
+Django==4.2.16
 djangorestframework
 psycopg2-binary
 django-cors-headers
