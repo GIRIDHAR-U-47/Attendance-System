@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { MODEL_URL, API_URL } from '../config';
 
@@ -143,9 +144,18 @@ export default function FacultyFaceSetupScreen({ route, navigation }) {
         <View style={styles.statusBox}>
             <Text style={styles.statusText}>{getPoseInstructions(currentPose)}</Text>
             <View style={styles.badgeContainer}>
-                <Text style={[styles.badge, capturedPoses.front ? styles.badgeSuccess : null]}>Front</Text>
-                <Text style={[styles.badge, capturedPoses.left ? styles.badgeSuccess : null]}>Left</Text>
-                <Text style={[styles.badge, capturedPoses.right ? styles.badgeSuccess : null]}>Right</Text>
+                <View style={[styles.badge, capturedPoses.front ? styles.badgeSuccess : null]}>
+                  {capturedPoses.front && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.front ? {color:'#fff'} : null]}>Front</Text>
+                </View>
+                <View style={[styles.badge, capturedPoses.left ? styles.badgeSuccess : null]}>
+                  {capturedPoses.left && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.left ? {color:'#fff'} : null]}>Left</Text>
+                </View>
+                <View style={[styles.badge, capturedPoses.right ? styles.badgeSuccess : null]}>
+                  {capturedPoses.right && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.right ? {color:'#fff'} : null]}>Right</Text>
+                </View>
             </View>
         </View>
 
@@ -161,6 +171,7 @@ export default function FacultyFaceSetupScreen({ route, navigation }) {
 
             {!allCaptured && !loading && (
                 <TouchableOpacity style={styles.captureBtn} onPress={handleCapture}>
+                   <Ionicons name="camera" size={20} color={COLORS.primary} style={{marginRight:8}} />
                    <Text style={styles.captureBtnText}>Capture {currentPose.toUpperCase()}</Text>
                 </TouchableOpacity>
             )}
@@ -171,7 +182,10 @@ export default function FacultyFaceSetupScreen({ route, navigation }) {
           onPress={handleRegister} 
           disabled={!allCaptured || loading}
         >
-          <Text style={styles.submitBtnText}>{loading ? 'Computing...' : 'Complete Setup & Enter Portal'}</Text>
+          <View style={{flexDirection:'row', alignItems:'center'}}>
+            <Ionicons name="shield-checkmark" size={22} color={COLORS.white} style={{marginRight:10}} />
+            <Text style={styles.submitBtnText}>{loading ? 'Computing...' : 'Complete Setup & Enter Portal'}</Text>
+          </View>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -186,13 +200,14 @@ const styles = StyleSheet.create({
   statusBox: { backgroundColor: COLORS.white, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 15 },
   statusText: { fontSize: 16, fontWeight: 'bold', color: COLORS.warning, textAlign: 'center', marginBottom: 10 },
   badgeContainer: { flexDirection: 'row', justifyContent: 'space-around' },
-  badge: { backgroundColor: '#E0E0E0', paddingHorizontal: 15, paddingVertical: 5, borderRadius: 20, fontSize: 12, fontWeight: 'bold', color: '#757575', overflow: 'hidden' },
-  badgeSuccess: { backgroundColor: COLORS.success, color: COLORS.white },
+  badge: { backgroundColor: '#E0E0E0', paddingHorizontal: 15, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center' },
+  badgeText: { fontSize: 12, fontWeight: 'bold', color: '#757575' },
+  badgeSuccess: { backgroundColor: COLORS.success },
 
   cameraContainer: { height: height * 0.5, borderRadius: 16, overflow: 'hidden', marginBottom: 20, borderWidth: 2, borderColor: COLORS.primary, backgroundColor: '#000' },
   camera: { flex: 1 },
   overlayLoader: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  captureBtn: { position: 'absolute', bottom: 15, alignSelf: 'center', backgroundColor: COLORS.white, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 25, elevation: 5 },
+  captureBtn: { position: 'absolute', bottom: 15, alignSelf: 'center', backgroundColor: COLORS.white, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 25, elevation: 5, flexDirection: 'row', alignItems: 'center' },
   captureBtnText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 16 },
   
   submitBtn: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center', marginBottom: 40, elevation: 4 },

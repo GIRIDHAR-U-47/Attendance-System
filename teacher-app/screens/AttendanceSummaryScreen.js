@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList,
   TouchableOpacity, SafeAreaView
 } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const C = {
   primary:   '#6A1B9A',
@@ -38,7 +39,8 @@ export default function AttendanceSummaryScreen({ navigation, route }) {
       </View>
       <Text style={styles.timeBadge}>{item.time}</Text>
       <View style={styles.statusBadge}>
-        <Text style={styles.statusText}>✓ Present</Text>
+        <Ionicons name="checkmark-circle" size={14} color={C.success} style={{ marginRight: 4 }} />
+        <Text style={styles.statusText}>Present</Text>
       </View>
     </View>
   );
@@ -52,7 +54,10 @@ export default function AttendanceSummaryScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Session Complete ✅</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={styles.title}>Session Complete</Text>
+          <Ionicons name="checkmark-circle" size={26} color={C.success} style={{ marginLeft: 8 }} />
+        </View>
         <Text style={styles.subtitle}>{subjectCode} — {subjectName}</Text>
       </View>
 
@@ -94,7 +99,7 @@ export default function AttendanceSummaryScreen({ navigation, route }) {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <MaterialCommunityIcons name="clipboard-text-outline" size={50} color={C.border} />
             <Text style={styles.emptyText}>No students were marked present this session.</Text>
           </View>
         }
@@ -102,7 +107,10 @@ export default function AttendanceSummaryScreen({ navigation, route }) {
 
       {/* Done button → back to Subjects (home) */}
       <TouchableOpacity style={styles.doneBtn} onPress={handleDone}>
-        <Text style={styles.doneBtnText}>🏠  Back to Dashboard</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="home-outline" size={20} color={C.white} style={{ marginRight: 8 }} />
+          <Text style={styles.doneBtnText}>Back to Dashboard</Text>
+        </View>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -141,8 +149,8 @@ const styles = StyleSheet.create({
   studentName: { fontSize: 15, fontWeight: '700', color: '#333' },
   studentRoll: { fontSize: 12, color: '#757575', marginTop: 2 },
   timeBadge:   { fontSize: 12, color: '#BDBDBD', marginRight: 10 },
-  statusBadge: { backgroundColor: C.successBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  statusText:  { color: C.success, fontSize: 12, fontWeight: '800', overflow: 'hidden' },
+  statusBadge: { backgroundColor: C.successBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
+  statusText:  { color: C.success, fontSize: 12, fontWeight: '800' },
 
   emptyBox:  { alignItems: 'center', marginTop: 40 },
   emptyIcon: { fontSize: 40, marginBottom: 12 },

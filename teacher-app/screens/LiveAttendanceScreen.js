@@ -4,6 +4,7 @@ import {
   ActivityIndicator, SafeAreaView, Dimensions, Alert
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { MODEL_URL, API_URL } from '../config';
 
@@ -23,8 +24,10 @@ export default function LiveAttendanceScreen({ navigation, route }) {
   const { subject, teacherId, user } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState('back');
   const [sessionId, setSessionId] = useState(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState('');
   const [stopping, setStopping] = useState(false);
   
   // Track present students with confidence/spoof data
@@ -43,6 +46,7 @@ export default function LiveAttendanceScreen({ navigation, route }) {
       if (res.data.success) {
         setSessionId(res.data.session_id);
         setSessionStarted(true);
+        setSessionStartTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         console.log('[Session] Started:', res.data.session_id);
       } else {
         Alert.alert('Session Error', res.data.message);
@@ -182,14 +186,25 @@ export default function LiveAttendanceScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.subjectText}>{subject.subject_code || subject.code}</Text>
           <Text style={styles.subjectNameText}>{subject.subject_name || subject.name}</Text>
-        </View>
-        <View style={[styles.sessionBadge, { backgroundColor: sessionStarted ? '#E8F5E9' : '#FFF3E0' }]}>
-          <Text style={[styles.sessionBadgeText, { color: sessionStarted ? COLORS.success : '#EF6C00' }]}>
-            {sessionStarted ? '● LIVE' : '⟳ Starting...'}
+          <Text style={styles.academicInfoText}>
+            {subject.department} • Year {subject.year}
           </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={[styles.sessionBadge, { backgroundColor: sessionStarted ? '#E8F5E9' : '#FFF3E0' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {sessionStarted && <View style={styles.liveDot} />}
+              <Text style={[styles.sessionBadgeText, { color: sessionStarted ? COLORS.success : '#EF6C00' }]}>
+                {sessionStarted ? 'LIVE' : 'Starting...'}
+              </Text>
+            </View>
+          </View>
+          {sessionStarted && (
+            <Text style={styles.startTimeText}>Started: {sessionStartTime}</Text>
+          )}
         </View>
       </View>
 
@@ -197,12 +212,22 @@ export default function LiveAttendanceScreen({ navigation, route }) {
 
       {/* Camera */}
       <View style={styles.cameraContainer}>
-        <CameraView style={styles.camera} facing="back" ref={cameraRef}>
+        <CameraView style={styles.camera} facing={cameraFacing} ref={cameraRef}>
           {scanning && (
             <View style={styles.scanOverlay}>
               <ActivityIndicator size="large" color={COLORS.primary} />
               <Text style={styles.scanningText}>Analyzing Face...</Text>
             </View>
+          )}
+          {/* Flip Camera Button */}
+          {!scanning && (
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={() => setCameraFacing(f => (f === 'back' ? 'front' : 'back'))}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="camera-reverse" size={24} color="#fff" />
+            </TouchableOpacity>
           )}
         </CameraView>
       </View>
@@ -214,7 +239,10 @@ export default function LiveAttendanceScreen({ navigation, route }) {
           onPress={handleScanFace}
           disabled={!sessionStarted || scanning}
         >
-          <Text style={styles.scanButtonText}>📷 MARK PRESENT</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="camera" size={24} color={COLORS.white} style={{ marginRight: 10 }} />
+            <Text style={styles.scanButtonText}>MARK PRESENT</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -238,7 +266,10 @@ export default function LiveAttendanceScreen({ navigation, route }) {
         {stopping ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.stopButtonText}>⏹ STOP & FINALIZE SESSION</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="stop-circle" size={22} color={COLORS.white} style={{ marginRight: 10 }} />
+            <Text style={styles.stopButtonText}>STOP & FINALIZE SESSION</Text>
+          </View>
         )}
       </TouchableOpacity>
     </SafeAreaView>
@@ -249,9 +280,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { padding: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   subjectText: { color: COLORS.primary, fontSize: 18, fontWeight: '800' },
-  subjectNameText: { color: '#757575', fontSize: 13, fontWeight: '500', marginTop: 2 },
+  subjectNameText: { color: '#333', fontSize: 13, fontWeight: '700', marginTop: 2 },
+  academicInfoText: { color: COLORS.textSecondary, fontSize: 11, marginTop: 2 },
   sessionBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  sessionBadgeText: { fontSize: 13, fontWeight: '800' },
+  sessionBadgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success, marginRight: 6 },
+  startTimeText: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, fontWeight: '600' },
   countText: { textAlign: 'center', color: COLORS.primary, fontWeight: '700', fontSize: 15, marginBottom: 8 },
 
   cameraContainer: { height: height * 0.38, marginHorizontal: 15, borderRadius: 16, overflow: 'hidden' },
@@ -261,6 +295,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', borderRadius: 16,
   },
   scanningText: { color: COLORS.primary, marginTop: 10, fontWeight: 'bold' },
+  flipButton: {
+    position: 'absolute', top: 10, right: 10,
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+  },
+  flipIcon: { fontSize: 20 },
 
   controlsRow: { flexDirection: 'row', padding: 15, justifyContent: 'center' },
   scanButton: {
