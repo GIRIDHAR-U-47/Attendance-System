@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { MODEL_URL } from '../config';
 
@@ -135,23 +136,35 @@ export default function RegistrationScreen({ navigation }) {
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Full Name</Text>
-          <TextInput style={styles.input} placeholder="e.g. Alice Smith" placeholderTextColor="#B0A0C0" value={name} onChangeText={setName} />
+          <View style={styles.inputWrapper}>
+            <MaterialIcons name="person" size={20} color={COLORS.primary} style={styles.inputIcon} />
+            <TextInput style={styles.input} placeholder="e.g. Alice Smith" placeholderTextColor="#B0A0C0" value={name} onChangeText={setName} />
+          </View>
         </View>
 
         <View style={styles.inputRow}>
             <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
                 <Text style={styles.label}>Roll Number</Text>
-                <TextInput style={styles.input} placeholder="e.g. 21CS001" placeholderTextColor="#B0A0C0" value={rollNo} onChangeText={setRollNo} autoCapitalize="characters" />
+                <View style={styles.inputWrapper}>
+                  <MaterialIcons name="badge" size={20} color={COLORS.primary} style={styles.inputIcon} />
+                  <TextInput style={styles.input} placeholder="e.g. 21CS001" placeholderTextColor="#B0A0C0" value={rollNo} onChangeText={setRollNo} autoCapitalize="characters" />
+                </View>
             </View>
             <View style={[styles.inputContainer, { flex: 1 }]}>
                 <Text style={styles.label}>Year</Text>
-                <TextInput style={styles.input} placeholder="e.g. 2024" placeholderTextColor="#B0A0C0" value={year} onChangeText={setYear} keyboardType="numeric" />
+                <View style={styles.inputWrapper}>
+                  <MaterialIcons name="calendar-today" size={20} color={COLORS.primary} style={styles.inputIcon} />
+                  <TextInput style={styles.input} placeholder="e.g. 2024" placeholderTextColor="#B0A0C0" value={year} onChangeText={setYear} keyboardType="numeric" />
+                </View>
             </View>
         </View>
         
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Department</Text>
-          <TextInput style={styles.input} placeholder="e.g. COMPUTER SCIENCE" placeholderTextColor="#B0A0C0" value={department} onChangeText={setDepartment} autoCapitalize="characters" />
+          <View style={styles.inputWrapper}>
+            <MaterialIcons name="school" size={20} color={COLORS.primary} style={styles.inputIcon} />
+            <TextInput style={styles.input} placeholder="e.g. COMPUTER SCIENCE" placeholderTextColor="#B0A0C0" value={department} onChangeText={setDepartment} autoCapitalize="characters" />
+          </View>
         </View>
 
         <Text style={styles.label}>Biometric Face Capture (3 Poses)</Text>
@@ -159,9 +172,18 @@ export default function RegistrationScreen({ navigation }) {
         <View style={styles.statusBox}>
             <Text style={styles.statusText}>{getPoseInstructions(currentPose)}</Text>
             <View style={styles.badgeContainer}>
-                <Text style={[styles.badge, capturedPoses.front ? styles.badgeSuccess : null]}>Front</Text>
-                <Text style={[styles.badge, capturedPoses.left ? styles.badgeSuccess : null]}>Left</Text>
-                <Text style={[styles.badge, capturedPoses.right ? styles.badgeSuccess : null]}>Right</Text>
+                <View style={[styles.badge, capturedPoses.front ? styles.badgeSuccess : null]}>
+                  {capturedPoses.front && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.front ? {color:'#fff'} : null]}>Front</Text>
+                </View>
+                <View style={[styles.badge, capturedPoses.left ? styles.badgeSuccess : null]}>
+                  {capturedPoses.left && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.left ? {color:'#fff'} : null]}>Left</Text>
+                </View>
+                <View style={[styles.badge, capturedPoses.right ? styles.badgeSuccess : null]}>
+                  {capturedPoses.right && <Ionicons name="checkmark-circle" size={14} color="#fff" style={{marginRight:4}} />}
+                  <Text style={[styles.badgeText, capturedPoses.right ? {color:'#fff'} : null]}>Right</Text>
+                </View>
             </View>
         </View>
 
@@ -177,6 +199,7 @@ export default function RegistrationScreen({ navigation }) {
 
             {!allCaptured && !loading && (
                 <TouchableOpacity style={styles.captureBtn} onPress={handleCapture}>
+                   <Ionicons name="camera" size={20} color={COLORS.primary} style={{marginRight:8}} />
                    <Text style={styles.captureBtnText}>Capture {currentPose.toUpperCase()}</Text>
                 </TouchableOpacity>
             )}
@@ -187,7 +210,10 @@ export default function RegistrationScreen({ navigation }) {
           onPress={handleRegister} 
           disabled={!allCaptured || loading}
         >
-          <Text style={styles.submitBtnText}>{loading ? 'Processing...' : 'Complete Registration'}</Text>
+          <View style={{flexDirection:'row', alignItems:'center'}}>
+            <Ionicons name="person-add" size={22} color={COLORS.white} style={{marginRight:10}} />
+            <Text style={styles.submitBtnText}>{loading ? 'Processing...' : 'Complete Registration'}</Text>
+          </View>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -202,18 +228,21 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', justifyContent: 'space-between' },
   inputContainer: { marginBottom: 15 },
   label: { color: COLORS.textDark, marginBottom: 8, fontSize: 14, fontWeight: '700', marginLeft: 4 },
-  input: { backgroundColor: COLORS.white, padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border, fontSize: 15, color: '#333' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border, paddingHorizontal: 12 },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: '#333' },
   
   statusBox: { backgroundColor: COLORS.white, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 15 },
   statusText: { fontSize: 16, fontWeight: 'bold', color: COLORS.warning, textAlign: 'center', marginBottom: 10 },
   badgeContainer: { flexDirection: 'row', justifyContent: 'space-around' },
-  badge: { backgroundColor: '#E0E0E0', paddingHorizontal: 15, paddingVertical: 5, borderRadius: 20, fontSize: 12, fontWeight: 'bold', color: '#757575' },
-  badgeSuccess: { backgroundColor: COLORS.success, color: COLORS.white },
+  badge: { backgroundColor: '#E0E0E0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center' },
+  badgeText: { fontSize: 12, fontWeight: 'bold', color: '#757575' },
+  badgeSuccess: { backgroundColor: COLORS.success },
 
   cameraContainer: { height: height * 0.4, borderRadius: 16, overflow: 'hidden', marginBottom: 20, borderWidth: 2, borderColor: COLORS.primary, backgroundColor: '#000' },
   camera: { flex: 1 },
   overlayLoader: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  captureBtn: { position: 'absolute', bottom: 15, alignSelf: 'center', backgroundColor: COLORS.white, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 25, elevation: 5 },
+  captureBtn: { position: 'absolute', bottom: 15, alignSelf: 'center', backgroundColor: COLORS.white, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 25, elevation: 5, flexDirection: 'row', alignItems: 'center' },
   captureBtnText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 16 },
   
   submitBtn: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center', marginBottom: 40, elevation: 4 },

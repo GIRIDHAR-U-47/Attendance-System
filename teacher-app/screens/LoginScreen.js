@@ -11,6 +11,7 @@ import {
     Platform,
     Image
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../config';
 
@@ -86,26 +87,32 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.form}>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Teacher ID / Username</Text>
-                <TextInput 
-                    style={styles.input} 
-                    placeholder="e.g. IT212"
-                    placeholderTextColor="#B0A0C0"
-                    value={teacherId} 
-                    onChangeText={setTeacherId} 
-                    autoCapitalize="none"
-                />
+                <View style={styles.inputWrapper}>
+                    <MaterialIcons name="person-outline" size={22} color={COLORS.primary} style={styles.icon} />
+                    <TextInput 
+                        style={styles.input} 
+                        placeholder="e.g. IT212"
+                        placeholderTextColor="#B0A0C0"
+                        value={teacherId} 
+                        onChangeText={setTeacherId} 
+                        autoCapitalize="none"
+                    />
+                </View>
             </View>
 
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password</Text>
-                <TextInput 
-                    style={styles.input} 
-                    placeholder="••••••••" 
-                    placeholderTextColor="#B0A0C0"
-                    secureTextEntry={true} 
-                    value={password} 
-                    onChangeText={setPassword} 
-                />
+                <View style={styles.inputWrapper}>
+                    <MaterialIcons name="lock-outline" size={22} color={COLORS.primary} style={styles.icon} />
+                    <TextInput 
+                        style={styles.input} 
+                        placeholder="••••••••" 
+                        placeholderTextColor="#B0A0C0"
+                        secureTextEntry={true} 
+                        value={password} 
+                        onChangeText={setPassword} 
+                    />
+                </View>
             </View>
 
             <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
@@ -174,18 +181,27 @@ const styles = StyleSheet.create({
       marginBottom: 8,
       marginLeft: 4,
   },
-  input: {
+  inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: '#FFFFFF',
-      padding: 18,
       borderRadius: 16,
       borderWidth: 1.5,
       borderColor: '#EDE7F6',
-      fontSize: 16,
-      color: COLORS.textDark,
       elevation: 2,
       shadowColor: '#6A1B9A',
       shadowOpacity: 0.05,
       shadowRadius: 10,
+      paddingHorizontal: 15,
+  },
+  icon: {
+      marginRight: 10,
+  },
+  input: {
+      flex: 1,
+      paddingVertical: 18,
+      fontSize: 16,
+      color: COLORS.textDark,
   },
   button: {
       backgroundColor: COLORS.primary,

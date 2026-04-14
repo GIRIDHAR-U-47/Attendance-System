@@ -236,9 +236,8 @@ def engine_log_attendance(request):
         student = User.objects.get(roll_number=roll_number)
         today = timezone.now().date()
         
-        # Prevent double logging
-        if Attendance.objects.filter(student=student, subject=subject_code, date=today).exists():
-            return Response({'success': False, 'message': 'Attendance already marked for today.'})
+        # Removed strict 'one-per-day' check to allow multiple periods/sessions
+        # of the same subject for a teacher on the same day.
             
         Attendance.objects.create(
             student=student, 

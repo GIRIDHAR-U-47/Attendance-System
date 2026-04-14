@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView,
   Modal, TextInput, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../config';
 
@@ -43,7 +44,7 @@ function Dropdown({ label, value, options, onSelect, placeholder }) {
         <Text style={[styles.pickerValue, !value && { color: C.textHint }]} numberOfLines={1}>
           {value || placeholder}
         </Text>
-        <Text style={styles.pickerArrow}>{open ? '▲' : '▼'}</Text>
+        <MaterialIcons name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={24} color="#9E9E9E" />
       </TouchableOpacity>
 
       {open && (
@@ -211,8 +212,14 @@ export default function SubjectsScreen({ navigation, route }) {
       </View>
       <Text style={styles.cardName}>{item.subject_name}</Text>
       <View style={styles.cardFooter}>
-        <Text style={styles.cardDept}>🏛 {item.department}</Text>
-        <Text style={styles.cardFaculty}>👤 {item.faculty_name || teacherId}</Text>
+        <View style={styles.cardInfoItem}>
+          <MaterialIcons name="business" size={14} color={C.textGray} />
+          <Text style={styles.cardDept}>{item.department}</Text>
+        </View>
+        <View style={styles.cardInfoItem}>
+          <MaterialIcons name="person" size={14} color="#9C27B0" />
+          <Text style={styles.cardFaculty}>{item.faculty_name || teacherId}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -234,7 +241,7 @@ export default function SubjectsScreen({ navigation, route }) {
             contentContainerStyle={styles.listPad}
             ListEmptyComponent={
               <View style={styles.emptyBox}>
-                <Text style={styles.emptyIcon}>📚</Text>
+                <MaterialCommunityIcons name="book-open-page-variant" size={80} color={C.border} />
                 <Text style={styles.emptyTitle}>No subjects yet</Text>
                 <Text style={styles.emptyHint}>Tap + to create your first subject</Text>
               </View>
@@ -244,7 +251,7 @@ export default function SubjectsScreen({ navigation, route }) {
 
       {/* ── Floating Action Button ── */}
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabIcon}>+</Text>
+        <Ionicons name="add" size={36} color="#fff" />
       </TouchableOpacity>
 
       {/* ════════════════ MODAL ════════════════ */}
@@ -258,7 +265,7 @@ export default function SubjectsScreen({ navigation, route }) {
             <View style={styles.modalHead}>
               <Text style={styles.modalTitle}>Create New Subject</Text>
               <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
-                <Text style={styles.closeBtn}>✕</Text>
+                <Ionicons name="close" size={28} color="#9E9E9E" />
               </TouchableOpacity>
             </View>
 
@@ -367,7 +374,7 @@ export default function SubjectsScreen({ navigation, route }) {
 
                     {/* Search */}
                     <View style={styles.searchBox}>
-                      <Text style={styles.searchIcon}>🔍</Text>
+                      <Ionicons name="search" size={18} color={C.textHint} style={{ marginRight: 8 }} />
                       <TextInput
                         style={styles.searchInput}
                         placeholder="Search by name or roll number..."
@@ -377,7 +384,7 @@ export default function SubjectsScreen({ navigation, route }) {
                       />
                       {studentSearch.length > 0 && (
                         <TouchableOpacity onPress={() => setStudentSearch('')}>
-                          <Text style={{ color: '#9E9E9E', fontSize: 18, paddingHorizontal: 6 }}>✕</Text>
+                          <Ionicons name="close-circle" size={20} color="#BDBDBD" />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -385,10 +392,16 @@ export default function SubjectsScreen({ navigation, route }) {
                     {/* Select / Deselect All */}
                     <View style={styles.selectAllRow}>
                       <TouchableOpacity style={styles.selectAllBtn} onPress={selectAll}>
-                        <Text style={[styles.selectAllText, { color: C.success }]}>✔ Select All</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons name="checkmark-done" size={16} color={C.success} style={{ marginRight: 4 }} />
+                          <Text style={[styles.selectAllText, { color: C.success }]}>Select All</Text>
+                        </View>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.selectAllBtn, styles.deSelectBtn]} onPress={deselectAll}>
-                        <Text style={[styles.selectAllText, { color: C.warn }]}>✕ Deselect All</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons name="close" size={16} color={C.warn} style={{ marginRight: 4 }} />
+                          <Text style={[styles.selectAllText, { color: C.warn }]}>Deselect All</Text>
+                        </View>
                       </TouchableOpacity>
                     </View>
 
@@ -407,7 +420,7 @@ export default function SubjectsScreen({ navigation, route }) {
                               activeOpacity={0.7}
                             >
                               <View style={[styles.cb, selected && styles.cbSel]}>
-                                {selected && <Text style={styles.cbCheck}>✓</Text>}
+                                {selected && <Ionicons name="checkmark" size={16} color="#fff" />}
                               </View>
                               <View style={{ flex: 1 }}>
                                 <Text style={styles.studentName}>{student.username}</Text>
@@ -479,10 +492,11 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   cardCode:   { color: C.textDark, fontSize: 18, fontWeight: '800' },
   cardBadge:  { backgroundColor: C.light, color: C.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, fontSize: 12, fontWeight: '700', overflow: 'hidden' },
-  cardName:   { color: '#333', fontSize: 16, marginBottom: 10, fontWeight: '600' },
+  cardName:   { color: '#333', fontSize: 16, marginBottom: 12, fontWeight: '600' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardDept:   { color: C.textGray, fontSize: 13, fontWeight: '500' },
-  cardFaculty:{ color: '#9C27B0', fontSize: 13, fontWeight: '500' },
+  cardInfoItem: { flexDirection: 'row', alignItems: 'center' },
+  cardDept:   { color: C.textGray, fontSize: 13, fontWeight: '500', marginLeft: 4 },
+  cardFaculty:{ color: '#9C27B0', fontSize: 13, fontWeight: '500', marginLeft: 4 },
 
   // Empty
   emptyBox:   { alignItems: 'center', marginTop: 80 },
