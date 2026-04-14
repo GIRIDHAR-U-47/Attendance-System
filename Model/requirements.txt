@@ -1,5 +1,7 @@
 flask
+Flask-Cors
 opencv-python
-numpy
+numpy<2.0.0
 insightface
 onnxruntime
+requests
