@@ -6,7 +6,10 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from .models import User, CampusZone, LocationRecord, Attendance, Note, Student, Faculty
+from .models import (
+    User, CampusZone, LocationRecord, Attendance, Note, Student, Faculty,
+    Canteen, CanteenOwnerProfile, FoodCategory, FoodItem, FoodReview, FoodOrder, FoodOrderItem
+)
 
 # ─────────────────────────────────────────
 # Constants
@@ -26,12 +29,16 @@ DEPARTMENT_CHOICES = [
 ]
 
 ACADEMIC_YEAR_CHOICES = [
-    ('', '— Select Year —'),
-    (1, 'Year 1  (1st Year)'),
-    (2, 'Year 2  (2nd Year)'),
-    (3, 'Year 3  (3rd Year)'),
-    (4, 'Year 4  (4th Year)'),
+    ('', '— Select Current Year —'),
+    (1, '1st Year'),
+    (2, '2nd Year'),
+    (3, '3rd Year'),
+    (4, '4th Year'),
 ]
+
+# Note: We now store year_of_joining as the calendar year (e.g., 2023)
+# but for selective UI, we'll keep the logic simple or use direct choices.
+# The user wants "selective form not manual typing" for both dept and year.
 
 custom_username_validator = RegexValidator(
     r'^[\w.@+\- ]+$',
@@ -57,11 +64,13 @@ class CustomStudentCreationForm(UserCreationForm):
     department = forms.ChoiceField(
         choices=DEPARTMENT_CHOICES, label='Department *', required=True
     )
-    year_of_joining = forms.ChoiceField(
-        choices=ACADEMIC_YEAR_CHOICES,
-        label='Current Academic Year *',
+    year_of_joining = forms.IntegerField(
+        label='Year of Joining (YYYY) *',
         required=True,
-        help_text='Year 1 = 1st year, Year 2 = 2nd year, etc.'
+        min_value=2000,
+        max_value=2100,
+        initial=timezone.now().year,
+        help_text='Enter the calendar year the student joined (e.g. 2023).'
     )
 
     class Meta(UserCreationForm.Meta):
@@ -145,14 +154,24 @@ class StudentAdmin(BaseUserAdmin):
     # ── Calculated "current year" display
     def academic_year(self, obj):
         if obj.year_of_joining:
+            current_calendar_year = timezone.now().year
+            # Basic math: (Current - Joined) + 1
+            # E.g. joined 2026 in 2026 -> 1st Year
+            # E.g. joined 2023 in 2026 -> 4th Year
+            calc_year = (current_calendar_year - obj.year_of_joining) + 1
+            
+            if calc_year <= 0: return 'Upcoming'
+            if calc_year > 4:  return 'Alumni'
+            
             labels = {1: '1st Year', 2: '2nd Year', 3: '3rd Year', 4: '4th Year'}
-            label  = labels.get(obj.year_of_joining, f'Year {obj.year_of_joining}')
+            label  = labels.get(calc_year, f'Year {calc_year}')
+            
             return format_html(
                 '<span style="background:#EDE7F6;color:#6A1B9A;padding:3px 10px;'
                 'border-radius:12px;font-weight:700;font-size:12px;">{}</span>', label
             )
         return '—'
-    academic_year.short_description = 'Academic Year'
+    academic_year.short_description = 'Current Year'
     academic_year.admin_order_field = 'year_of_joining'
 
     def password_status(self, obj):
@@ -316,6 +335,89 @@ class CampusZoneAdmin(admin.ModelAdmin):
 
 
 # ─────────────────────────────────────────
+# Canteen Admin (Single Step Onboarding)
+# ─────────────────────────────────────────
+class CanteenAdminForm(forms.ModelForm):
+    # Credentials fields only needed for creation
+    username = forms.CharField(max_length=150, required=False, help_text="Required when creating a new canteen.")
+    password = forms.CharField(widget=forms.PasswordInput, required=False)
+    confirm_password = forms.CharField(widget=forms.PasswordInput, required=False)
+
+    class Meta:
+        model = Canteen
+        fields = ['canteen_name', 'location_inside_campus', 'owner_name', 'owner_phone', 'description', 'logo_image', 'is_active']
+        labels = {
+            'owner_name': 'Owner Full Name'
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Because canteen_id has default=uuid.uuid4, self.instance.pk is never None!
+        # We must use self.instance._state.adding to check if this is a new creation
+        if self.instance._state.adding:
+            # We are creating a new canteen, credentials are required
+            username = cleaned_data.get("username")
+            password = cleaned_data.get("password")
+            confirm_password = cleaned_data.get("confirm_password")
+            
+            if not username or not password:
+                raise forms.ValidationError("Username and password are required for new canteens.")
+            if password != confirm_password:
+                raise forms.ValidationError("Passwords do not match.")
+            if User.objects.filter(username=username).exists():
+                raise forms.ValidationError("This username is already taken.")
+        return cleaned_data
+
+class CanteenAdmin(admin.ModelAdmin):
+    form = CanteenAdminForm
+    
+    fieldsets = (
+        ('SECTION 1: Canteen Details', {
+            'fields': ('canteen_name', 'location_inside_campus', 'owner_name', 'owner_phone', 'description', 'logo_image', 'is_active'),
+        }),
+    )
+
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            # Adding a new canteen, include credentials
+            return self.fieldsets + (
+                ('SECTION 2: Portal Credentials', {
+                    'fields': ('username', 'password', 'confirm_password'),
+                }),
+            )
+        # Editing an existing canteen, hide credentials config
+        return self.fieldsets
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change) # Save the Canteen first
+        
+        if not change:
+            # Creation process
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            owner_name = form.cleaned_data.get('owner_name')
+            
+            # 1. Create Django User
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=owner_name,
+                role='canteen',
+                roll_number=f"CANT_{username}" # Required PK mapping
+            )
+            
+            # 2. Create and Link CanteenOwnerProfile
+            CanteenOwnerProfile.objects.create(
+                user=user,
+                canteen=obj
+            )
+
+    list_display = ('canteen_name', 'owner_name', 'location_inside_campus', 'is_active')
+    search_fields = ('canteen_name', 'owner_name', 'owner_phone')
+    list_filter = ('is_active',)
+
+# ─────────────────────────────────────────
 # Registration
 # ─────────────────────────────────────────
 try:
@@ -330,3 +432,6 @@ admin.site.register(CampusZone,     CampusZoneAdmin)
 admin.site.register(LocationRecord, LocationRecordAdmin)
 admin.site.register(Attendance,     AttendanceAdmin)
 admin.site.register(Note)
+
+# --- Canteen Onboarding Only ---
+admin.site.register(Canteen, CanteenAdmin)

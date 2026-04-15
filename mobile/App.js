@@ -54,6 +54,7 @@ import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import NotesScreen from './screens/NotesScreen';
 import FaceSetupScreen from './screens/FaceSetupScreen';
+import CanteenNavigator from './screens/canteen/CanteenNavigator';
 
 import { Ionicons } from '@expo/vector-icons';
 const Tab = createBottomTabNavigator();
@@ -78,6 +79,7 @@ function MainTabs({ route }) {
           let iconName;
           if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Notes') iconName = focused ? 'journal' : 'journal-outline';
+          else if (route.name === 'Food') iconName = focused ? 'fast-food' : 'fast-food-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: COLORS.primary,
@@ -87,6 +89,7 @@ function MainTabs({ route }) {
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} initialParams={{ user, in_campus, zone_name }} />
       <Tab.Screen name="Notes" component={NotesScreen} initialParams={{ user }} />
+      <Tab.Screen name="Food" component={CanteenNavigator} initialParams={{ user }} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 }

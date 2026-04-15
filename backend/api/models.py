@@ -7,6 +7,7 @@ class User(AbstractUser):
         ('student', 'Student'),
         ('faculty', 'Faculty'),
         ('admin', 'Admin'),
+        ('canteen', 'Canteen Owner'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
     rfid_tag = models.CharField(max_length=100, blank=True, null=True)
@@ -120,3 +121,106 @@ class SubjectCatalog(models.Model):
     def __str__(self):
         return f"[{self.subject_code}] {self.subject_name} ({self.department} Yr{self.year} {self.semester})"
 
+# ----------------- CANTEEN MODULE MODELS -----------------
+
+class Canteen(models.Model):
+    canteen_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    canteen_name = models.CharField(max_length=200)
+    owner_name = models.CharField(max_length=150)
+    owner_phone = models.CharField(max_length=20)
+    location_inside_campus = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    logo_image = models.CharField(max_length=500, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.canteen_name
+
+class CanteenOwnerProfile(models.Model):
+    owner_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='canteen_profile')
+    canteen = models.OneToOneField(Canteen, on_delete=models.CASCADE, related_name='owner_profile')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.canteen.canteen_name}"
+
+class FoodCategory(models.Model):
+    category_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    canteen = models.ForeignKey(Canteen, on_delete=models.CASCADE, related_name='categories')
+    category_name = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name_plural = 'Food Categories'
+        unique_together = ('canteen', 'category_name')
+
+    def __str__(self):
+        return f"{self.category_name} ({self.canteen.canteen_name})"
+
+class FoodItem(models.Model):
+    item_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    canteen = models.ForeignKey(Canteen, on_delete=models.CASCADE, related_name='food_items')
+    category = models.ForeignKey(FoodCategory, on_delete=models.CASCADE, related_name='items')
+    item_name = models.CharField(max_length=150)
+    description = models.TextField(blank=True, null=True)
+    image_url = models.CharField(max_length=500, blank=True, null=True)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    stock_quantity = models.IntegerField(default=100)
+    is_available = models.BooleanField(default=True)
+    average_rating = models.FloatField(default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.item_name} - ₹{self.price}"
+
+class FoodReview(models.Model):
+    review_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    item = models.ForeignKey(FoodItem, on_delete=models.CASCADE, related_name='reviews')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    rating = models.IntegerField() # 1 to 5
+    review_text = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('item', 'student')
+
+    def __str__(self):
+        return f"{self.rating} stars by {self.student.username}"
+
+class FoodOrder(models.Model):
+    TOKEN_STATUS_CHOICES = (
+        ('ACTIVE', 'Active'),
+        ('REDEEMED', 'Redeemed'),
+        ('EXPIRED', 'Expired'),
+        ('CANCELLED', 'Cancelled'),
+    )
+    ORDER_STATUS_CHOICES = (
+        ('PENDING', 'Pending Payment'),
+        ('PAID', 'Paid'),
+    )
+
+    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    canteen = models.ForeignKey(Canteen, on_delete=models.CASCADE, related_name='orders')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='food_orders')
+    
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='PENDING')
+    token_status = models.CharField(max_length=20, choices=TOKEN_STATUS_CHOICES, default='ACTIVE')
+    qr_token = models.TextField(blank=True, null=True) # Will store signed JWT string
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Order {self.order_id} - {self.token_status}"
+
+class FoodOrderItem(models.Model):
+    order_item_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(FoodOrder, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey(FoodItem, on_delete=models.SET_NULL, null=True)
+    quantity = models.IntegerField(default=1)
+    price_at_purchase = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.item.item_name if self.item else 'Deleted Item'}"

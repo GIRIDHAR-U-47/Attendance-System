@@ -84,6 +84,10 @@ def login_view(request):
         if not user.device_id:
             user.device_id = device_id
             user.save()
+
+    # Update last login time
+    user.last_login = timezone.now()
+    user.save(update_fields=['last_login'])
     
     inside_campus = None
     current_zone = None
@@ -536,3 +540,39 @@ def student_attendance_history(request):
             'spoof_status': r.spoof_status
         })
     return Response(result)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_stats(request):
+    """GET /api/admin-stats/ - Dashboard statistics"""
+    total_students = User.objects.filter(role='student').count()
+    
+    # Active students: seen in last 15 mins
+    fifteen_mins_ago = timezone.now() - timedelta(minutes=15)
+    active_students = LocationRecord.objects.filter(
+        timestamp__gte=fifteen_mins_ago,
+        in_campus=True
+    ).values('student').distinct().count()
+
+    total_notes = Note.objects.count()
+
+    # Simple attendance rate calculation (e.g., sessions held today)
+    today = timezone.now().date()
+    sessions_today = AttendanceSession.objects.filter(session_date=today)
+    
+    total_expected = 0
+    total_present = 0
+    for s in sessions_today:
+        total_expected += s.expected_count
+        total_present += s.present_count
+        
+    attendance_rate = 0
+    if total_expected > 0:
+        attendance_rate = round((total_present / total_expected) * 100, 1)
+
+    return Response({
+        'total_students':  total_students,
+        'active_students': active_students,
+        'attendance_rate': attendance_rate,
+        'total_notes':     total_notes
+    })

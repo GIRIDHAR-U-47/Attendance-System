@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import User, CampusZone, LocationRecord, Attendance, Note, Subject, StudentSubjectEnrollment, AttendanceSession, AttendanceRecord, SubjectCatalog
+from .models import (
+    User, CampusZone, LocationRecord, Attendance, Note, Subject, 
+    StudentSubjectEnrollment, AttendanceSession, AttendanceRecord, SubjectCatalog,
+    Canteen, CanteenOwnerProfile, FoodCategory, FoodItem, FoodReview, FoodOrder, FoodOrderItem
+)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -68,3 +72,56 @@ class SubjectCatalogSerializer(serializers.ModelSerializer):
         model = SubjectCatalog
         fields = ['subject_code', 'subject_name', 'department', 'year', 'semester']
 
+# ----------------- CANTEEN MODULE SERIALIZERS -----------------
+
+class CanteenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Canteen
+        fields = '__all__'
+
+class FoodCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodCategory
+        fields = '__all__'
+
+class FoodReviewSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.username', read_only=True)
+
+    class Meta:
+        model = FoodReview
+        fields = ['review_id', 'item', 'student', 'student_name', 'rating', 'review_text', 'created_at']
+
+class FoodItemSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.category_name', read_only=True)
+    reviews_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FoodItem
+        fields = [
+            'item_id', 'canteen', 'category', 'category_name', 'item_name', 
+            'description', 'image_url', 'price', 'stock_quantity', 'is_available', 
+            'average_rating', 'reviews_count'
+        ]
+
+    def get_reviews_count(self, obj):
+        return obj.reviews.count()
+
+class FoodOrderItemSerializer(serializers.ModelSerializer):
+    item_name = serializers.CharField(source='item.item_name', read_only=True)
+    
+    class Meta:
+        model = FoodOrderItem
+        fields = ['order_item_id', 'item', 'item_name', 'quantity', 'price_at_purchase']
+
+class FoodOrderSerializer(serializers.ModelSerializer):
+    student_details = UserSerializer(source='student', read_only=True)
+    canteen_name = serializers.CharField(source='canteen.canteen_name', read_only=True)
+    items = FoodOrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = FoodOrder
+        fields = [
+            'order_id', 'canteen', 'canteen_name', 'student', 'student_details', 
+            'total_amount', 'order_status', 'token_status', 'qr_token', 
+            'created_at', 'expires_at', 'redeemed_at', 'items'
+        ]

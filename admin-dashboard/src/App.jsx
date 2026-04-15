@@ -19,7 +19,10 @@ import {
   Camera,
   RefreshCcw,
   LogOut,
-  Navigation
+  Navigation,
+  UtensilsCrossed,
+  AlertTriangle,
+  Store
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
@@ -49,6 +52,7 @@ function App() {
   const [studentDetails, setStudentDetails] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const overviewMapRef = useRef();
+  const [canteenAnalytics, setCanteenAnalytics] = useState(null);
   
   const [stats, setStats] = useState({ 
       total_students: 0, 
@@ -108,6 +112,14 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (currentView === 'canteen') {
+      axios.get(`${API_URL}/admin/canteen-analytics/`)
+        .then(res => setCanteenAnalytics(res.data))
+        .catch(err => console.error('Canteen analytics error:', err));
+    }
+  }, [currentView]);
+
   const focusOnStudent = (lat, lng) => {
     if (currentView !== 'overview') {
         setCurrentView('overview');
@@ -155,6 +167,9 @@ function App() {
           <button className={`nav-item ${currentView === 'attendance' ? 'active' : ''}`} onClick={() => setCurrentView('attendance')}>
             <History size={18} /> Attendance Reports
           </button>
+          <button className={`nav-item ${currentView === 'canteen' ? 'active' : ''}`} onClick={() => setCurrentView('canteen')}>
+            <UtensilsCrossed size={18} /> Canteen Analytics
+          </button>
         </nav>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -175,6 +190,7 @@ function App() {
               {currentView === 'overview' && 'Campus Dashboard'}
               {currentView === 'students' && 'Students Directory'}
               {currentView === 'attendance' && 'Attendance Logs'}
+              {currentView === 'canteen' && 'Canteen Analytics'}
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>Rajalakshmi Engineering College | Real-time Analytics</p>
           </div>
@@ -247,7 +263,7 @@ function App() {
                     />
                     
                     {zones.map(zone => {
-                        if (zone.polygon_coordinates && zone.polygon_coordinates.length > 0) {
+                        if (zone.polygon_coordinates && Array.isArray(zone.polygon_coordinates) && zone.polygon_coordinates.length > 0) {
                         const positions = zone.polygon_coordinates.map(c => [c.lat, c.lng]);
                         return (
                             <Polygon 
@@ -262,18 +278,21 @@ function App() {
                         return null;
                     })}
 
-                    {students.map(loc => (
-                        <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-                        <Popup>
-                            <div style={{ minWidth: '150px' }}>
-                                <h3 style={{ margin: '0 0 5px', color: '#6A1B9A' }}>{loc.student_details?.username}</h3>
-                                <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Status:</b> <span style={{ color: loc.in_campus ? '#22c55e' : '#ef4444' }}>{loc.in_campus ? 'Inside' : 'Outside'}</span></p>
-                                <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Zone:</b> {loc.current_zone_name || 'Exploring'}</p>
-                                <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Update:</b> {new Date(loc.timestamp).toLocaleTimeString()}</p>
-                            </div>
-                        </Popup>
-                        </Marker>
-                    ))}
+                    {students.map(loc => {
+                        if (loc.latitude === undefined || loc.longitude === undefined) return null;
+                        return (
+                            <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
+                                <Popup>
+                                    <div style={{ minWidth: '150px' }}>
+                                        <h3 style={{ margin: '0 0 5px', color: '#6A1B9A' }}>{loc.student_details?.username || 'Unknown Student'}</h3>
+                                        <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Status:</b> <span style={{ color: loc.in_campus ? '#22c55e' : '#ef4444' }}>{loc.in_campus ? 'Inside' : 'Outside'}</span></p>
+                                        <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Zone:</b> {loc.current_zone_name || 'Exploring'}</p>
+                                        <p style={{ margin: 0, fontSize: '0.8rem' }}><b>Update:</b> {loc.timestamp ? new Date(loc.timestamp).toLocaleTimeString() : 'N/A'}</p>
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
                 </MapContainer>
               </div>
 
@@ -291,10 +310,10 @@ function App() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E5F5', color: '#6A1B9A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                          {loc.student_details?.username[0]}
+                          {loc.student_details?.username?.[0] || 'S'}
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                          <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{loc.student_details?.username}</p>
+                          <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{loc.student_details?.username || 'Student ' + loc.student}</p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{loc.current_zone_name || 'REC Boundary'}</p>
                         </div>
                       </div>
@@ -382,6 +401,87 @@ function App() {
                   </table>
                 </div>
              </div>
+          </div>
+        )}
+
+        {currentView === 'canteen' && (
+          <div className="fade-in">
+            {canteenAnalytics ? (
+              <>
+                <div className="stats-grid">
+                  <div className="card stat-card" style={{ borderBottom: '4px solid #6A1B9A' }}>
+                    <div className="icon-box" style={{ background: '#F3E5F5', color: '#6A1B9A' }}><Store /></div>
+                    <div>
+                      <p className="stat-label">Active Canteens</p>
+                      <p className="stat-number">{canteenAnalytics.active_canteens} / {canteenAnalytics.total_canteens}</p>
+                    </div>
+                  </div>
+                  <div className="card stat-card" style={{ borderBottom: '4px solid #22c55e' }}>
+                    <div className="icon-box" style={{ background: '#f0fdf4', color: '#22c55e' }}><TrendingUp /></div>
+                    <div>
+                      <p className="stat-label">Today's Sales</p>
+                      <p className="stat-number">₹{canteenAnalytics.total_sales_today}</p>
+                    </div>
+                  </div>
+                  <div className="card stat-card" style={{ borderBottom: '4px solid #f59e0b' }}>
+                    <div className="icon-box" style={{ background: '#fef3c7', color: '#f59e0b' }}><Clock /></div>
+                    <div>
+                      <p className="stat-label">Pending Orders</p>
+                      <p className="stat-number">{canteenAnalytics.pending_orders}</p>
+                    </div>
+                  </div>
+                  <div className="card stat-card" style={{ borderBottom: '4px solid #1976D2' }}>
+                    <div className="icon-box" style={{ background: '#E3F2FD', color: '#1976D2' }}><BookOpen /></div>
+                    <div>
+                      <p className="stat-label">All-Time Revenue</p>
+                      <p className="stat-number">₹{canteenAnalytics.total_revenue_alltime}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+                  <div className="card">
+                    <h3 style={{ marginBottom: '1rem', color: '#6A1B9A', fontWeight: 800 }}>Per-Canteen Breakdown (Today)</h3>
+                    <div className="table-container">
+                      <table>
+                        <thead><tr><th>Canteen</th><th>Status</th><th>Orders</th><th>Sales</th><th>Pending</th></tr></thead>
+                        <tbody>
+                          {canteenAnalytics.canteen_breakdown.map(c => (
+                            <tr key={c.canteen_id}>
+                              <td style={{ fontWeight: 600 }}>{c.canteen_name}</td>
+                              <td><span className={`badge ${c.is_active ? 'badge-success' : 'badge-danger'}`}>{c.is_active ? 'Active' : 'Inactive'}</span></td>
+                              <td>{c.orders_today}</td>
+                              <td style={{ fontWeight: 600 }}>₹{c.sales_today}</td>
+                              <td>{c.pending}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444' }}>
+                      <AlertTriangle size={18} /> Low Stock Alerts
+                    </h3>
+                    {canteenAnalytics.low_stock_alerts.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {canteenAnalytics.low_stock_alerts.map((a, i) => (
+                          <div key={i} style={{ background: '#fef2f2', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #fecaca' }}>
+                            <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{a.item}</p>
+                            <p style={{ fontSize: '0.75rem', color: '#666' }}>{a.canteen} — <span style={{ color: '#ef4444', fontWeight: 700 }}>{a.stock} left</span></p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ textAlign: 'center', color: '#22c55e', marginTop: '2rem', fontWeight: 600 }}>✅ All items well-stocked</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem' }}><RefreshCcw className="animate-spin" size={32} color="#6A1B9A" /></div>
+            )}
           </div>
         )}
       </main>
