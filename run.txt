@@ -1,0 +1,28 @@
+cd d:\Attendance-System\Model
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+
+
+cd d:\Attendance-System\backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python populate_db.py
+python populate_zones.py
+python manage.py runserver 0.0.0.0:8000
+
+
+cd d:\Attendance-System\admin-dashboard
+npm install
+npm run dev
+
+
+# For the Student App
+cd d:\Attendance-System\mobile
+npm install
+npx expo start
+
+

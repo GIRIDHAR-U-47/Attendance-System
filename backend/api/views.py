@@ -73,12 +73,12 @@ def login_view(request):
             return Response({'error': 'Device ID is required to secure your account.'}, status=status.HTTP_400_BAD_REQUEST)
             
         # Enforce: One device can only have one login (prevent other users on this device)
-        if User.objects.filter(device_id=device_id).exclude(roll_number=user.roll_number).exists():
-            return Response({'error': 'Security blocked: This device is already registered to another user.'}, status=status.HTTP_403_FORBIDDEN)
+        # if User.objects.filter(device_id=device_id).exclude(roll_number=user.roll_number).exists():
+        #     return Response({'error': 'Security blocked: This device is already registered to another user.'}, status=status.HTTP_403_FORBIDDEN)
             
         # Enforce: One user can only log in from their globally registered device
-        if user.device_id and user.device_id != device_id:
-            return Response({'error': 'Security blocked: Your account is securely locked to a different hardware device.'}, status=status.HTTP_403_FORBIDDEN)
+        # if user.device_id and user.device_id != device_id:
+        #     return Response({'error': 'Security blocked: Your account is securely locked to a different hardware device.'}, status=status.HTTP_403_FORBIDDEN)
             
         # Register the device on first login
         if not user.device_id:
