@@ -5,7 +5,7 @@ from datetime import date, timedelta
 # Set up Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
-
+#api import 
 from api.models import User, Attendance
 
 def populate():
