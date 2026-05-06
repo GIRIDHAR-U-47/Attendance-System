@@ -227,4 +227,5 @@ const styles = StyleSheet.create({
       marginTop: 40,
       fontWeight: '500',
   }
+    
 });
