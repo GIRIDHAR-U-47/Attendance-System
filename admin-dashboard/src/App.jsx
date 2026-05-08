@@ -79,6 +79,7 @@ function App() {
       setStats(statsRes.data);
       setStudentDetails(studRes.data);
 
+      
       const latest = {};
       locRes.data.forEach(loc => {
         if (!latest[loc.student]) {
