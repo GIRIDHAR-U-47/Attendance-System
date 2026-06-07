@@ -90,7 +90,6 @@ function MainTabs({ route }) {
     </Tab.Navigator>
   );
 }
-
 export default function App() {
   return (
     <NavigationContainer>
