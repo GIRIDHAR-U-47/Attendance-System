@@ -12,6 +12,7 @@ import FacultyFaceSetupScreen from './screens/FacultyFaceSetupScreen';
 
 const Stack = createNativeStackNavigator();
 
+
 export default function App() {
   return (
     <SafeAreaProvider>
