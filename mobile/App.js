@@ -34,7 +34,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
                 await SecureStore.deleteItemAsync('userSession');
                 await SecureStore.deleteItemAsync('userSessionDate');
                 await SecureStore.deleteItemAsync('autoLogoutMessage');
-                await SecureStore.setItemAsync('autoLogoutMessage', 'Security Alert: Auto-log out due to movement outside campus boundary.');
+                await SecureStore.setItemAsync('autoLogoutMessage', 'Alert: Auto-log out due to movement outside campus boundary.');
                 await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
             }
         }
